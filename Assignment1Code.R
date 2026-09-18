@@ -1,17 +1,21 @@
-set.seed(123)
+set.seed(123)#reproduce results, can be removed for a more random simulation
+library(survival)
 
 findCmaxAnyPrc <- function( targetPrc, nCount, lambda){
   if(targetPrc == 0){
-    return(1.8*(10^308))
+    return(1.8*(10^308)) #fun fact, this is about the biggest number R can handle, after that it's INF
   }
   
-  timesValues <- rexp(nCount, lambda)
-  cmaxValues <- seq(1, 5*max(timesValues), by = 0.1)
-  empiricalCensoring <- sapply(cmaxValues, function(cmax){
+  timesValues <- rexp(nCount, lambda)#generates a fresh batch of values each run, idk if it's the best choice though
+  cmaxValues <- seq(1, 5*max(timesValues), by = 0.1)#make cmax based on the values simulated
+  empiricalCensoring <- sapply(cmaxValues, function(cmax){#basically, for each cmax value
+    #calculates what percentage of the simulated values would be censored, i.e. event time 
+    #smaller than censored time
     cnes <- runif(nCount, 0, cmax)
     mean(timesValues > cnes)
   })
-  
+  #based on the percentages calculated, choose the cmax value with the closes percenetage to the target from the list
+  #as in, if the target is 50%, the cmax entry where the empirical percentage is 49% or 51% is chosen, no safety for higher or lower
   bestCmax<-cmaxValues[which.min(abs(empiricalCensoring - targetPrc))]
   
   list(cmax = bestCmax)
@@ -31,10 +35,11 @@ generalSimulationFunction <- function(simulationR = 2000, nCount, targetPrc, tar
   rZeroNAcounter <- vector(mode = "logical", length = simulationR)
   
   for (run in 1:simulationR){
+    #these are taken straight from the lecture slides, minus the if's
     eventsT <- rexp(nCount, lambda)
     
     if(targetPrc == 0){
-      censored <- rep(Inf, nCount)
+      censored <- rep(Inf, nCount)#no censoring, so to make sure there's nothing censored, just use R's biggest value
     }else{
       censored <- runif(nCount, 0, targetCmax)
     }
@@ -54,6 +59,10 @@ generalSimulationFunction <- function(simulationR = 2000, nCount, targetPrc, tar
     } else {
       mleEstimator <- sum(delta)/sum(Y)
     }
+    
+    #fit.exp<-survreg(Surv(Y, delta)~1, dist = "exponential")
+    #added this for fun, to see the output, slows down the program a lot so I'd avoid uncommenting it 
+    #print(fit.exp)
     
     naiveEstimatorsResults[run] <- naiveEstimator
     mleEstimatorsResults[run] <- mleEstimator
