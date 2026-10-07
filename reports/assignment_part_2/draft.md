@@ -342,14 +342,6 @@ For each scenario we also report the observed censoring rate and the number of r
 
 Both the log-logistic and the Weibull fits are AFT models fitted with survreg, so their coefficients are on the same scale and can be compared with the same true values. When age is left out, only β_D, β_E and β_K are evaluated.
 
-### Alternative Analysis
-
-(a) Wrong distribution: fitting a Weibull model
-We fit a Weibull AFT model instead of the log-logistic one.
-Why it is wrong: the Weibull hazard can only increase, decrease or stay constant. It cannot rise and then fall, so it cannot capture the early "dangerous peak" in the true hazard.
-(b) Omitting an important covariate: leaving out age
-We fit the correct log-logistic model, but without age.
-Why it is wrong: age is a confounder. It increases the number of comorbidities (K) and the chance of an extra-hepatic cause (E), and it also shortens survival directly.
 
 ### Hypotheses
 
