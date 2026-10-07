@@ -35,13 +35,13 @@ draw_t <- function(covariates, beta_values, gamma_val) {
 }
 
 # generate censoring
-# type i: patients that are alive past 90 days are censored (i.e. value >= 90 is censored)
+# type i: patients that are alive past 90 days are censored (value >= 90)
 # type ii: loss to follow-up (< cmax)
 find_cmax <- function(target_loss, n_count, cutoff, gamma_val, beta_values) {
   # Around 1 million entries for the simulation for cmax
   cmax_sim_data <- generate_data(n_count)
   cmax_sim_times <- draw_t(cmax_sim_data, beta_values, gamma_val)
-  # Smallest values for each position between the value at said position and cutoff (remove past cutoff)
+  # Smallest values between event time and cutoff (remove past cutoff)
   min_times <- pmin(cmax_sim_times, cutoff)
   loss_objective <- function(proposed_cmax) {
     mean(pmin(min_times, proposed_cmax) / proposed_cmax) - target_loss
@@ -58,4 +58,52 @@ cmax_data <- lapply(
   beta_values = beta_values
 )
 names(cmax_data) <- loss_to_follow_up_vector
-print(cmax_data)
+
+# generate full simulation dataset for a scenario
+generate_cohort <- function(n_patients, r_runs, cmax, cutoff,
+                            beta_vals, gam_val) {
+  total_obs <- n_patients * r_runs
+  covariates <- generate_data(total_obs)
+  event_times <- draw_t(covariates, beta_vals, gam_val)
+  loss_times <- runif(total_obs, min = 0, max = cmax)
+  censor_times <- pmin(cutoff, loss_times)
+  observed_times <- pmin(event_times, censor_times)
+  event_status <- as.integer(event_times <= censor_times)
+
+  data.frame(
+    run_id = rep(seq_len(r_runs), each = n_patients),
+    days = covariates[["days"]],
+    age = covariates[["age"]],
+    nr_comor = covariates[["nr_comor"]],
+    damage = covariates[["damage"]],
+    time = observed_times,
+    status = event_status
+  )
+}
+
+simulated_data <- list(
+  n200_loss05 = generate_cohort(
+    n_1, sim_runs, cmax_data[["0.05"]], tau, beta_values, gamma_val
+  ),
+  n200_loss10 = generate_cohort(
+    n_1, sim_runs, cmax_data[["0.1"]], tau, beta_values, gamma_val
+  ),
+  n500_loss05 = generate_cohort(
+    n_2, sim_runs, cmax_data[["0.05"]], tau, beta_values, gamma_val
+  ),
+  n500_loss10 = generate_cohort(
+    n_2, sim_runs, cmax_data[["0.1"]], tau, beta_values, gamma_val
+  )
+)
+
+data_dir <- if (dir.exists("src/assignment_part_2/data")) {
+  "src/assignment_part_2/data"
+} else {
+  "data"
+}
+if (!dir.exists(data_dir)) {
+  dir.create(data_dir, recursive = TRUE)
+}
+
+saveRDS(cmax_data, file = file.path(data_dir, "cmax_data.rds"))
+saveRDS(simulated_data, file = file.path(data_dir, "simulated_data.rds"))

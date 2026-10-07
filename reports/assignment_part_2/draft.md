@@ -20,6 +20,30 @@ For example:
 A flowchart is encouraged.
 
 **Solution**
+Our goal is to generate synthetic dataset and then fit a distribution model based on observed values which help us answering the following research questions:
+**RQ1.** How accurately (bias, variance, MSE) does the log-logistic model estimate the true β ’s, and how does this change with sample size (n = 200 vs. 500) and loss to follow-up (5% vs. 10%)?
+**RQ2.** How biased are the estimates if we (a) fit a Weibull model, which cannot capture the early peak, or (b) leave out the confounder age?
+
+A suitable algorithm for this is described by the flowchart at Figure 1.
+
+<!-- TODO: generate the flowchart with maid diagram describing the following:
+Two major steps with smaller inbetween steps:
+- 1. Data Generation:
+  - 1.1 Define constants based on our hand-picked, but plausible values (beta: [... TODO add these based on report or add table + reference if there is enough space])
+  - 1.2 Define covariates generation function f_{covariates} that produces the parameters for a single observation (d, a, k, e) by drawing values from the right distribution
+  - 1.3 Define survival time generation algorithm f_{survival} that produces the survival time based on the observed covariates and inversed sampling
+  - 1.4 Define a censoring function f_{censor} that generates a plausible c_{max} value based on the beta values the target percentile of events and applies it to survival times
+  - 1.5 Define data generation function f_{data} which runs f_{survival}, f_{censor} in pipeline
+  - 1.6 Run f_{data} with the constants defined in 1.1 to produce the observation data
+2. Model fitting:
+  - 2.1 Define model fitting helper function f_{model} that fits a distribution for a simulated run and generates estimated survival times based on observerd covariates
+  - 2.2 Load simulated data from step 1
+  - 2.3 Produce estimates for RQ1's log-logistic model: Run f_{model} with days, age, number of comorbidities and damage outside liver indicators as covariates and log-logistic as the distribution model
+  - 2.4 Produce estimates for RQ2's weibull model: Run f_{model} with same covariates as 2.3 and weibull as distribution models
+  - 2.5 Produce estimates for RQ2's log-logistic model: Run f_{model} with all the covariates, but leaving out the age cofounder and log-logistic as distribution model
+  - 2.6 Gather and save estimation results
+
+-->
 
 ### Software Implementation
 
@@ -35,8 +59,6 @@ Coverage = the share of 95% confidence intervals that contain the true β: are t
 For each scenario we also report the observed censoring rate and the number of runs that failed to converge (these are excluded).
 
 Both the log-logistic and the Weibull fits are AFT models fitted with survreg, so their coefficients are on the same scale and can be compared with the same true values. When age is left out, only β_D, β_E and β_K are evaluated.
-
-
 
 ### Hypotheses
 
@@ -66,7 +88,6 @@ Both the log-logistic and the Weibull fits are AFT models fitted with survreg, s
 
 **H8.** The effect of days to treatment will stay close to its true value when age is left out, but it will be estimated slightly less precisely. The reason is that days to treatment was generated independently of age, so age does not confound it. The variation in survival caused by age becomes unexplained noise. This makes the estimates a bit less precise, but does not push them in a particular direction.
 
-
 ## Appendix
 
 ### Response to Feedback
@@ -74,7 +95,6 @@ Both the log-logistic and the Weibull fits are AFT models fitted with survreg, s
 > "The only comment I have is that you do not look up the literature after Gemini gave you information about TPE and liver failure. Can you check this for the next assignment?"
 
 **Response:** As a fact-checking the provided information from Geimini Pro, based on ([https://www.aasld.org/liver-fellow-network/core-series/why-series/why-would-we-consider-plasma-exchange-acute-liver](https://pmc.ncbi.nlm.nih.gov/articles/PMC9239959/#Sec12)), TPE is used for AFL for either as a "bridge" to liver recovery or maintain stability until liver transplant is possible. When it comes to comorbitidies, older age is strongly associated with an increased accumulation and severity of extrahepatic comorbid diseases (such as cardiovascular disease, chronic kidney disease, and type 2 diabetes) [Jepsen, 2014, pp. 7223–7225]. Metabolic comorbidities (obesity, type 2 diabetes, dyslipidemia) are the primary drivers of metabolic problems associated with steatotic liver disease [Huang et al., 2023, pp. 389–391]. Patients receiving TPE for acute liver failure are critically ill intensive-care patients and their trajectory is determined within days to weeks by either native hepatocyte recovery or emergency transplant, making outpatient hospital readmission an uninformative metric for acute TPE efficacy [Chris-Olaiya et al., 2021, pp. 905–906]. Reviewing this literature justified moving away from a hospital readmission framework and instead defining the failure event in Part I as transplant-free survival (time to death or liver transplant), observed from the first TPE cycle with right-censoring at 90 days [Larsen et al., 2016, pp. 70–72; Chris-Olaiya et al., 2021, p. 906].
-
 
 ### Use of Artificial Intelligence Tools
 
