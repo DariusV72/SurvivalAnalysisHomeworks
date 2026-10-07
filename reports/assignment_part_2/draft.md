@@ -25,6 +25,19 @@ A flowchart is encouraged.
 
 ### Performance Measures
 
+We evaluate the estimates of β_D, β_E, β_A and β_K, with β_E as the main target. In each of the R = 2000 runs we store the estimate β̂ and its standard error. With β̄ the average estimate over all runs, we compute:
+
+Bias = β̄ − β: is the estimate systematically wrong?
+Empirical SE = the standard deviation of the estimates: how much does the estimate vary between runs? (Variance = SE².)
+MSE = the average of (β̂ − β)² ≈ Bias² + Variance: the total error.
+Coverage = the share of 95% confidence intervals that contain the true β: are the standard errors reliable? It should be close to 95%.
+
+For each scenario we also report the observed censoring rate and the number of runs that failed to converge (these are excluded).
+
+Both the log-logistic and the Weibull fits are AFT models fitted with survreg, so their coefficients are on the same scale and can be compared with the same true values. When age is left out, only β_D, β_E and β_K are evaluated.
+
+
+
 ### Hypotheses
 
 > **Research questions:**
