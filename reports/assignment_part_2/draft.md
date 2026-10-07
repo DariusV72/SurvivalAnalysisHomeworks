@@ -25,6 +25,19 @@ A flowchart is encouraged.
 
 ### Performance Measures
 
+We evaluate the estimates of β_D, β_E, β_A and β_K, with β_E as the main target. In each of the R = 2000 runs we store the estimate β̂ and its standard error. With β̄ the average estimate over all runs, we compute:
+
+Bias = β̄ − β: is the estimate systematically wrong?
+Empirical SE = the standard deviation of the estimates: how much does the estimate vary between runs? (Variance = SE².)
+MSE = the average of (β̂ − β)² ≈ Bias² + Variance: the total error.
+Coverage = the share of 95% confidence intervals that contain the true β: are the standard errors reliable? It should be close to 95%.
+
+For each scenario we also report the observed censoring rate and the number of runs that failed to converge (these are excluded).
+
+Both the log-logistic and the Weibull fits are AFT models fitted with survreg, so their coefficients are on the same scale and can be compared with the same true values. When age is left out, only β_D, β_E and β_K are evaluated.
+
+
+
 ### Hypotheses
 
 > **Research questions:**
@@ -36,6 +49,22 @@ A flowchart is encouraged.
 ### Response to Feedback
 
 > "The only comment I have is that you do not look up the literature after Gemini gave you information about TPE and liver failure. Can you check this for the next assignment?"
+
+**Response:** As a fact-checking the provided information from Geimini Pro, based on ([https://www.aasld.org/liver-fellow-network/core-series/why-series/why-would-we-consider-plasma-exchange-acute-liver](https://pmc.ncbi.nlm.nih.gov/articles/PMC9239959/#Sec12)), TPE is used for AFL for either as a "bridge" to liver recovery or maintain stability until liver transplant is possible. When it comes to comorbitidies, older age is strongly associated with an increased accumulation and severity of extrahepatic comorbid diseases (such as cardiovascular disease, chronic kidney disease, and type 2 diabetes) [Jepsen, 2014, pp. 7223–7225]. Metabolic comorbidities (obesity, type 2 diabetes, dyslipidemia) are the primary drivers of metabolic problems associated with steatotic liver disease [Huang et al., 2023, pp. 389–391]. Patients receiving TPE for acute liver failure are critically ill intensive-care patients and their trajectory is determined within days to weeks by either native hepatocyte recovery or emergency transplant, making outpatient hospital readmission an uninformative metric for acute TPE efficacy [Chris-Olaiya et al., 2021, pp. 905–906]. Reviewing this literature justified moving away from a hospital readmission framework and instead defining the failure event in Part I as transplant-free survival (time to death or liver transplant), observed from the first TPE cycle with right-censoring at 90 days [Larsen et al., 2016, pp. 70–72; Chris-Olaiya et al., 2021, p. 906].
+
+
+### Contribution Statement
+
+### Rubric (not part of the submission)
+
+- Feedback: 5
+- Code: 1
+- Correct implementation: 1
+- Presentation of results: 1
+- Interpretation and discussion: 1
+- Conclusions and recommendations: 1
+
+**Initial answer for feedback:**
 
 **Response:** In Part I, we utilized exploratory AI prompts to brainstorm clinical contexts without subsequently verifying the outputs against published medical literature. Below, we fact-check each of the three exploratory questions against peer-reviewed hepatology literature, grounding our simulation design, covariate selections, and survival event definitions:
 
@@ -91,14 +120,3 @@ A flowchart is encouraged.
   - Reviewing this literature justified moving away from a hospital readmission framework and instead defining the failure event in Part I as **transplant-free survival (time to death or liver transplantation)**, observed from the first TPE cycle with right-censoring at 90 days [Larsen et al., 2016, pp. 70–72; Chris-Olaiya et al., 2021, p. 906].
 
 ### Use of Artificial Intelligence Tools
-
-### Contribution Statement
-
-### Rubric (not part of the submission)
-
-- Feedback: 5
-- Code: 1
-- Correct implementation: 1
-- Presentation of results: 1
-- Interpretation and discussion: 1
-- Conclusions and recommendations: 1
