@@ -15,15 +15,33 @@ data_dir <- if (dir.exists("src/assignment_part_2/data")) {
 sim_data_path <- file.path(data_dir, "simulated_data.rds")
 simulated_data <- readRDS(sim_data_path)
 
-# Helper function to fit a parametric model across all 2000 runs in a scenario
+# Observed censoring rate per scenario (share of patients with status == 0)
+censoring_rate <- vapply(simulated_data, function(d) 1 - mean(d[["status"]]), numeric(1))
+
+# Helper function to fit a parametric model across all 2000 runs in a scenario.
+# Stores coefficients, scale and standard errors for every run. Runs where
+# survreg fails or does not converge are skipped (excluded) and counted in
+# the "n_failed" attribute of the result.
+fit_one_run <- function(run_data, model_formula, dist_name) {
+  fit <- tryCatch(
+    survreg(model_formula, data = run_data, dist = dist_name),
+    error = function(e) NULL,
+    warning = function(w) NULL
+  )
+  if (is.null(fit)) {
+    return(NULL)
+  }
+  se <- sqrt(diag(vcov(fit)))[names(coef(fit))]
+  c(coef(fit), scale = fit[["scale"]], setNames(se, paste0("se_", names(se))))
+}
+
 fit_model_across_runs <- function(scenario_df, model_formula, dist_name) {
   runs <- split(scenario_df, scenario_df[["run_id"]])
-  estimates_list <- lapply(runs, function(run_data) {
-    fit <- survreg(model_formula, data = run_data, dist = dist_name)
-    c(coef(fit), scale = fit[["scale"]])
-  })
-  estimates_df <- as.data.frame(do.call(rbind, estimates_list))
-  names(estimates_df)[names(estimates_df) == "(Intercept)"] <- "intercept"
+  estimates_list <- lapply(runs, fit_one_run, model_formula, dist_name)
+  failed <- vapply(estimates_list, is.null, logical(1))
+  estimates_df <- as.data.frame(do.call(rbind, estimates_list[!failed]))
+  names(estimates_df) <- sub("(Intercept)", "intercept", names(estimates_df), fixed = TRUE)
+  attr(estimates_df, "n_failed") <- sum(failed)
   estimates_df
 }
 
@@ -80,7 +98,8 @@ rq2b_estimates <- lapply(
 model_estimates <- list(
   rq1_loglogistic = rq1_estimates,
   rq2a_weibull = rq2a_estimates,
-  rq2b_no_age = rq2b_estimates
+  rq2b_no_age = rq2b_estimates,
+  censoring_rate = censoring_rate
 )
 
 saveRDS(model_estimates, file = file.path(data_dir, "model_estimates.rds"))
