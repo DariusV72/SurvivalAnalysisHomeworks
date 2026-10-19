@@ -1,5 +1,7 @@
 set.seed(123)
 
+
+
 beta_values <- c(b_0 = 5.8, b_d = -0.1, b_a = -0.02, b_k = -0.25, b_e = -0.7)
 gamma_val <- 1.1
 phi_vals <- c(p_d = 0.9, p_a = 0.98, p_k = 0.78, p_e = 0.5)
@@ -62,6 +64,7 @@ names(cmax_data) <- loss_to_follow_up_vector
 # generate full simulation dataset for a scenario
 generate_cohort <- function(n_patients, r_runs, cmax, cutoff,
                             beta_vals, gam_val) {
+  run_id = rep(seq_len(r_runs), each = n_patients)
   total_obs <- n_patients * r_runs
   covariates <- generate_data(total_obs)
   event_times <- draw_t(covariates, beta_vals, gam_val)
@@ -69,15 +72,19 @@ generate_cohort <- function(n_patients, r_runs, cmax, cutoff,
   censor_times <- pmin(cutoff, loss_times)
   observed_times <- pmin(event_times, censor_times)
   event_status <- as.integer(event_times <= censor_times)
+  
+  censoredPerRun <- tapply(1L - event_status, run_id, sum)
+
 
   data.frame(
-    run_id = rep(seq_len(r_runs), each = n_patients),
+    run_id = run_id,
     days = covariates[["days"]],
     age = covariates[["age"]],
     nr_comor = covariates[["nr_comor"]],
     damage = covariates[["damage"]],
     time = observed_times,
-    status = event_status
+    status = event_status,
+    censored = as.integer(censoredPerRun[run_id]) 
   )
 }
 
