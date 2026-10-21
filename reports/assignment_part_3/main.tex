@@ -98,6 +98,13 @@ M3 no age & 200 & $-0.170$ & 0.276 & 0.105 & 90\% & $-0.124$ & 0.110 & 0.027 & 7
 \section{Conclusions}
 
 \section{Limitations}
+We have noticed the following limitations in our study:
+\begin{itemize}
+    \item The parameters $\beta$, $\gamma$ are assumed, not estimated, and the covariate distributions are reasonable guesses, which may work for this scenario, but may not apply to real-life cases and datasets.
+    \item Covariates are simplistic, with no interactions or relations between them (i.e. age and etiology), assumes no changes in covariates over time (i.e. an increase in K due to other health issues).
+    \item Limited scope with only 200 or 500 subjects, for a maximum of 2000 runs each and the same $\beta$ and $\gamma$ values, may lead to biases.
+    \item Covariate K is overly-simplistic, different comorbidities and issues may have different effects over the patients, so just counting them assumes that they have an equal effect, i.e. diabetes is considered as damaging as an auto-immune disease.
+\end{itemize}
 
 
 %=====================================================================
