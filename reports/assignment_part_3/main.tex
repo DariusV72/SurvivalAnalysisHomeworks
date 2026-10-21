@@ -1,0 +1,123 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.4cm,top=1.1cm,bottom=1.2cm]{geometry}
+\usepackage{mathptmx}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{listings}
+\setlist{nosep,leftmargin=1.3em}
+\titleformat{\section}{\normalsize\bfseries}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{4pt}{1pt}
+\captionsetup{font=small,labelfont=bf,skip=3pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\pagestyle{empty}
+
+% Marker for content that still has to be filled in by the group.
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+% Small R listing style for the condensed code
+\lstdefinestyle{rcode}{
+  language=R,
+  basicstyle=\ttfamily\fontsize{6.1}{7.0}\selectfont,
+  commentstyle=\itshape\color{gray},
+  keywordstyle=\bfseries,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  breakindent=0pt,
+  aboveskip=0pt, belowskip=0pt,
+  xleftmargin=0pt, framexleftmargin=0pt,
+  frame=none
+}
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries Assignment 2 - Part 3}\\[3pt]
+{\small 2AMS11 Survival Analysis for Data Science --- Group Assignment, Part III --- October 2026}\\[1pt]
+{\small\textbf{Group 49:} Avram Andrei, Mihaiescu Cristian, Szelestey Adam, Vrincianu Darius, Zeng Qin Tao}
+\end{center}
+\vspace{-8pt}
+
+\section*{Response to Feedback}
+\textbf{Feedback received:} \todo{quote the feedback on Part II}
+\textbf{How it was addressed:} \todo{what we changed and where (section / code)}
+\textbf{Suggestions not adopted:} \todo{none, or which ones and why}
+
+
+\section{Results}
+We ran the simulation from Part~II (seed 123, 2000 runs per scenario). The observed censoring was 43\% (5\% loss to follow-up) and 45\% (10\% loss). Table~\ref{tab:res} reports bias, empirical SE, MSE and coverage for $\beta_E$ and $\beta_K$ at 5\% loss; the 10\% loss results differ by less than 0.01 in SE. Figure~\ref{fig:res} shows the distribution of the estimates in all four scenarios.
+
+\textbf{Correct analysis (M1).} Bias is between $-0.009$ and $+0.004$, coverage is 94--95\%, and the MSE of $\beta_E$ is 0.081 at $n=200$ and 0.030 at $n=500$.
+
+\textbf{Incorrect analyses.} \emph{M2 (Weibull):} bias is $+0.08$ to $+0.10$ for $\beta_E$ and $+0.03$ to $+0.04$ for $\beta_K$; coverage is 87--92\%. \emph{M3 (no age):} bias is $-0.16$ to $-0.17$ for $\beta_E$ and $-0.12$ for $\beta_K$; coverage for $\beta_K$ is 78\% at $n=200$ and 54\% at $n=500$. For $\beta_D$ (not in the table), M3 has a bias below 0.001 and 94--95\% coverage.
+
+\begin{table}[H]
+\centering\scriptsize\setlength{\tabcolsep}{4pt}
+\caption{Results at 5\% loss to follow-up over 2000 runs. SE = empirical standard error; Cov.\ = share of 95\% intervals that contain the true value.}\label{tab:res}
+\begin{tabular}{@{}lr rrrr rrrr@{}}
+\toprule
+ & & \multicolumn{4}{c}{Etiology $\beta_E$ (true $-0.70$)} & \multicolumn{4}{c}{Comorbidities $\beta_K$ (true $-0.25$)} \\
+\cmidrule(lr){3-6}\cmidrule(l){7-10}
+Model & $n$ & Bias & SE & MSE & Cov. & Bias & SE & MSE & Cov. \\
+\midrule
+M1 (correct) & 200 & $-0.009$ & 0.284 & 0.081 & 95\% & $+0.001$ & 0.126 & 0.016 & 95\% \\
+ & 500 & $+0.004$ & 0.173 & 0.030 & 95\% & $+0.001$ & 0.080 & 0.006 & 94\% \\
+\addlinespace
+M2 Weibull & 200 & $+0.078$ & 0.264 & 0.076 & 92\% & $+0.031$ & 0.122 & 0.016 & 91\% \\
+ & 500 & $+0.097$ & 0.163 & 0.036 & 89\% & $+0.036$ & 0.078 & 0.007 & 87\% \\
+\addlinespace
+M3 no age & 200 & $-0.170$ & 0.276 & 0.105 & 90\% & $-0.124$ & 0.110 & 0.027 & 78\% \\
+ & 500 & $-0.158$ & 0.169 & 0.053 & 86\% & $-0.124$ & 0.069 & 0.020 & 54\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{reports/assignment_part_3/image.png}
+\caption{Estimates of $\beta_E$ and $\beta_K$ over 2000 runs (boxes: middle 50\%; dashed line: true value). Only M1 is centred on the truth.}\label{fig:res}
+\end{figure}
+
+\section{Evaluation}
+
+
+\section{Comparison with expectations}
+
+\section{Conclusions}
+
+\section{Limitations}
+
+
+%=====================================================================
+\newpage
+\section*{Use of AI tools}
+
+
+\section*{Contribution statement}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+\item Avram Andrei: \todo{}
+\item Mihaiescu Cristian: \todo{}
+\item Szelestey Adam: \todo{}
+\item Vrincianu Darius: \todo{}
+\item Zeng Qin Tao: Results (performance measures code, tables and figure).
+\end{itemize}
+All group members confirm that this contribution statement is accurate.
+
+\section*{References}
+
+
+\section*{Appendix: Code}
+
+\end{document}

@@ -49,42 +49,73 @@
 \end{center}
 \vspace{-8pt}
 
-\section{Response to Feedback}
-\textbf{Feedback received:} ``The only comment I have is that you do not look up the literature after Gemini gave you information about TPE and liver failure. Can you check this for the next assignment?''
-\textbf{How it was addressed:} We fact-checked the information from Gemini Pro against the literature. TPE is used in acute liver failure (ALF) either as a ``bridge'' to liver recovery or to maintain stability until a transplant is possible (Chris-Olaiya et al., 2021, p.~906; Larsen et al., 2016). Older age is strongly associated with a higher accumulation and severity of extrahepatic comorbid diseases, such as cardiovascular disease, chronic kidney disease and type 2 diabetes (Jepsen, 2014, pp.~7223--7225). Metabolic comorbidities (obesity, type 2 diabetes, dyslipidemia) are the primary drivers of metabolic problems associated with steatotic liver disease (Huang et al., 2023, pp.~389--391). Patients receiving TPE for ALF are critically ill intensive-care patients whose trajectory is determined within days to weeks by either native hepatocyte recovery or emergency transplant, which makes outpatient hospital readmission an uninformative metric for acute TPE efficacy (Chris-Olaiya et al., 2021, pp.~905--906). This literature justified moving away from a hospital-readmission framework. In Part I we instead define the failure event as transplant-free survival (time to death or liver transplant), observed from the first TPE cycle with right-censoring at 90 days (Larsen et al., 2016, pp.~70--72; Chris-Olaiya et al., 2021, p.~906).
-\textbf{Suggestions not adopted:} none; the single suggestion was adopted.
+\section{Practical context}
+Acute liver failure (ALF) is a sudden loss of liver function. Therapeutic plasma exchange (TPE) replaces the patient's plasma to remove toxins, prevent brain swelling and support the other organs. It buys time for the liver to regenerate by itself.
+\textbf{Event:} failure, i.e.\ death or liver transplant, whichever comes first. Surviving without a transplant (``transplant-free survival'') is a success.
+\textbf{Time origin:} the first TPE cycle; time is measured in days.
+\textbf{Population:} adults with ALF who are treated with TPE.
+\textbf{Why survival analysis:} the outcome is a time to an event, and many patients are still alive without a transplant when follow-up ends, so their times are right-censored.
 
-\section{Simulation algorithm}
-Our goal is to generate synthetic datasets from the Part~I model and then fit parametric models to the observed values, which helps us answer the following research questions:
-\textbf{RQ1.} How accurately (bias, variance, MSE) does the log-logistic model estimate the true $\beta$'s, and how does this change with sample size ($n=200$ vs.\ $500$) and loss to follow-up (5\% vs.\ 10\%)?
-\textbf{RQ2.} How biased are the estimates if we (a) fit a Weibull model, which cannot capture the early peak, or (b) leave out the confounder age?
+\section{Survival model}
+We use a \textbf{log-logistic} model ($\log T$ follows a logistic distribution). When its shape parameter $\gamma>1$, the hazard first rises and then falls. This matches ALF: the risk is highest in the first days, while the liver is failing (a ``dangerous peak''). Patients who survive this period usually recover, so their risk drops.
 
-\textbf{Setup.} Fix the true parameters (Table~\ref{tab:par}) and $\gamma=1.1$, $\tau=90$ days, $n\in\{200,500\}$, loss to follow-up $p\in\{5\%,10\%\}$ and $R=2000$ runs. For each $p$, find $c_{\max}$ numerically (\texttt{uniroot}, on $10^6$ simulated patients) such that $P(L<\min(T,\tau))=p$, with $L\sim U(0,c_{\max})$. This is the probability that a patient is lost to follow-up before their event or the 90-day cutoff. Then, for each of the four scenarios $(n,p)$ and each run $r=1,\dots,R$:
-\begin{enumerate}[label=(\alph*),itemsep=0pt]
-\item \textbf{Generate covariates} $D,A,K,E$ for $n$ patients from the distributions in Table~\ref{tab:par}.
-\item \textbf{Generate event times} $T=\lambda\,(U/(1-U))^{1/\gamma}$ with $U\sim U(0,1)$ and $\lambda=\exp(\beta_0+\beta_D D+\beta_E E+\beta_A A+\beta_K K)$ (inverse-CDF method).
-\item \textbf{Generate censoring times} $C=\min(\tau,L)$ with $L\sim U(0,c_{\max})$.
-\item \textbf{Construct the observed dataset:} $Y=\min(T,C)$ (\texttt{time}) and $\Delta=I\{T\le C\}$ (\texttt{status}).
-\item \textbf{Fit the models} with \texttt{survreg}: M1 log-logistic with all covariates (RQ1), M2 Weibull with all covariates (RQ2a), M3 log-logistic without age (RQ2b).
-\item \textbf{Store} $\hat\beta$, the scale ($=1/\hat\gamma$ for the log-logistic model) and the standard errors of each fit. Fits that fail or do not converge are skipped and counted.
-\item \textbf{Repeat} for all $R=2000$ runs and four scenarios, then compute the performance measures.
-\end{enumerate}
-In the code, all $n\cdot R$ patients of a scenario are generated at once and split into runs by \texttt{run\_id}.
+\section{Covariates}
+\begin{itemize}
+\item $D$, \textbf{days from diagnosis to first TPE}: later treatment lets toxins build up and damages more organs $\Rightarrow$ shorter survival.
+\item $E$, \textbf{etiology}: $1$ = cause that also damages other organs (e.g.\ accident, heart failure), $0$ = liver-only cause (e.g.\ drug, virus). Damage outside the liver $\Rightarrow$ shorter survival.
+\item $A$, \textbf{age}: older bodies regenerate the liver more slowly $\Rightarrow$ shorter survival.
+\item $K$, \textbf{number of comorbidities} (e.g.\ diabetes, immune disorders): these slow recovery $\Rightarrow$ shorter survival.
+\end{itemize}
+\textbf{Relationships:} older patients have more comorbidities and are more likely to have a heart-related cause (poor blood flow to the liver). Age therefore affects $E$, $K$ and $T$, which makes it a \emph{confounder} for the effects of $E$ and $K$ (e.g.\ $K\leftarrow A\rightarrow T$). $D$ is assumed to be independent of the others. All covariates are measured at the first TPE cycle.
+
+\section{Censoring}
+The data are \textbf{right-censored} for two reasons. (i) \emph{Type I:} follow-up ends at $\tau=90$ days, and patients who are alive without a transplant at that point are censored. (ii) \emph{Loss to follow-up}, e.g.\ transfer to another hospital. We observe $Y=\min(T,C)$ and $\Delta=I\{T\le C\}$.
+We assume \textbf{uninformative censoring}: $C$ is independent of $T$ given the covariates. This holds for (i) by design. It may fail for (ii) if very sick patients are more often transferred; survival would then be overestimated. A transplant counts as a failure, not as censoring. Otherwise censoring would be informative, because the sickest patients are the ones who receive a transplant.
+
+\section{Data-generating mechanism}
+\label{sec:data_generating}
+\textbf{Model.} Each patient's survival time $T$ is log-logistic:
+\vspace{-4pt}
+\[
+S(t)=\frac{1}{1+(t/\lambda)^{\gamma}},\qquad \lambda=\exp\big(\beta_0+\beta_D D+\beta_E E+\beta_A A+\beta_K K\big).
+\]
+\vspace{-10pt}
+
+$S(t)$ is the probability of being alive without a transplant after $t$ days. $\lambda$ is the patient's median survival time, since $S(\lambda)=\tfrac12$. Each covariate changes $\lambda$: one unit more multiplies the median by the time ratio $\phi=e^{\beta}$. $\gamma$ is the shape, and $\gamma>1$ gives the early peak in the hazard. (Lecture form: $1/(1+\tilde\lambda t^{\gamma})$ with $\tilde\lambda=\lambda^{-\gamma}$.)
+
+\textbf{Simulation steps} for each patient: (1) draw $D,A,K,E$ from Table~\ref{tab:cov}; (2) compute $\lambda$; (3) draw $T=\lambda\,(U/(1-U))^{1/\gamma}$ with $U\sim U(0,1)$, which is the inverse-CDF method; (4) draw $C=\min(90,L)$ with $L\sim U(0,c_{\max})$; (5) record $Y=\min(T,C)$ and $\Delta=I\{T\le C\}$. We will use $n\in\{200,500\}$ patients and $R=2000$ simulation runs.
+
+\textbf{How we chose the numbers.} The values are our own plausible assumptions; they are not estimated from data. The signs of the $\beta$'s follow Section~3. Etiology has the largest effect because the cause of ALF is a strong predictor of outcome in registry data; the other effects are moderate. The covariate distributions are chosen to give realistic values, and age raises both the mean of $K$ (0.6 at age 45, 1.6 at age 65) and $P(E=1)$ (23\% vs.\ 50\%). $\beta_0=5.8$ and $\gamma=1.1$ are chosen so that a reference patient ($D=4$, $E=0$, $A=45$, $K=0$) has a median of $e^{5.8-0.4-0.9}=e^{4.5}\approx90$ days and a hazard peak at $\lambda(\gamma-1)^{1/\gamma}\approx$ day 11.
 
 \begin{table}[H]
 \centering\footnotesize
-\caption{Covariates, their R names and true effects ($\beta_0=5.8$). $\phi=e^{\beta}$ is the time ratio per unit.}\label{tab:par}
-\begin{tabular}{@{}lllrr@{}}
+\caption{Covariates and true effects. $\phi=e^{\beta}$ is the time ratio per unit; $\phi<1$ means shorter survival.}\label{tab:cov}
+\begin{tabular}{@{}llrr@{}}
 \toprule
-Covariate & R name & Distribution & $\beta$ & $\phi$ \\
+Covariate & Distribution & $\beta$ & $\phi$ \\
 \midrule
-$D$: days from diagnosis to TPE & \texttt{days} & $\mathrm{Gamma}(2,\ \text{scale } 2)$ & $-0.10$ & $0.90$ \\
-$A$: age (years) & \texttt{age} & $\mathcal N(45,15^2)$, capped to $[18,85]$ & $-0.02$ & $0.98$ \\
-$K$: number of comorbidities & \texttt{nr\_comor} & $\mathrm{Poisson}$, mean $e^{-2.75+0.05A}$ & $-0.25$ & $0.78$ \\
-$E$: damage outside the liver & \texttt{damage} & $\mathrm{Bernoulli}$, $P(E{=}1)=\frac{1}{1+e^{\,3.9-0.06A}}$ & $-0.70$ & $0.50$ \\
+$D$: days from diagnosis to TPE & $\mathrm{Gamma}(2,\ \text{scale } 2)$, mean 4 & $-0.10$ & $0.90$ \\
+$A$: age (years) & $\mathcal N(45,15^2)$, capped to $[18,85]$ & $-0.02$ & $0.98$ \\
+$K$: number of comorbidities & $\mathrm{Poisson}$, mean $e^{-2.75+0.05A}$ & $-0.25$ & $0.78$ \\
+$E$: damage outside the liver & $\mathrm{Bernoulli}$, $P(E{=}1)=\frac{1}{1+e^{\,3.9-0.06A}}$ & $-0.70$ & $0.50$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+\vspace{-10pt}
+
+\section{Research questions}
+\textbf{RQ1.} How accurately (bias, variance, MSE) does the log-logistic model estimate the true $\beta$'s, and how does this change with sample size ($n=200$ vs.\ $500$) and loss to follow-up (5\% vs.\ 10\%)?
+\textbf{RQ2.} How biased are the estimates if we (a) fit a Weibull model, which cannot capture the early peak, or (b) leave out the confounder age?
+
+\newpage
+\section{Simulation algorithm}
+Our goal is to generate synthetic datasets from the Part~I model and then fit parametric models to the observed values.
+
+% , which helps us answer the following research questions:
+% \textbf{RQ1.} How accurately (bias, variance, MSE) does the log-logistic model estimate the true $\beta$'s, and how does this change with sample size ($n=200$ vs.\ $500$) and loss to follow-up (5\% vs.\ 10\%)?
+% \textbf{RQ2.} How biased are the estimates if we (a) fit a Weibull model, which cannot capture the early peak, or (b) leave out the confounder age?
+\textbf{Setup.} Fix the true parameters (see Table~\ref{tab:cov}, Section \ref{sec:data_generating}) and $\gamma=1.1$, $\tau=90$ days, $n\in\{200,500\}$, loss to follow-up $p\in\{5\%,10\%\}$ and $R=2000$ runs. For each $p$, find $c_{\max}$ numerically (\texttt{uniroot}, on $10^6$ simulated patients) such that $P(L<\min(T,\tau))=p$, with $L\sim U(0,c_{\max})$. This is the probability that a patient is lost to follow-up before their event or the 90-day cutoff. Then, for each of the four scenarios $(n,p)$ and each run $r=1,\dots,R$: a) \textbf{Generate covariates} $D,A,K,E$ for $n$ patients from the distributions in Table~\ref{tab:cov}. b) \textbf{Generate event times} $T=\lambda\,(U/(1-U))^{1/\gamma}$ with $U\sim U(0,1)$ and $\lambda=\exp(\beta_0+\beta_D D+\beta_E E+\beta_A A+\beta_K K)$ (inverse-CDF method). c) \textbf{Generate censoring times} $C=\min(\tau,L)$ with $L\sim U(0,c_{\max})$. d) \textbf{Construct the observed dataset:} $Y=\min(T,C)$ (\texttt{time}) and $\Delta=I\{T\le C\}$ (\texttt{status}). e) \textbf{Fit the models} with \texttt{survreg}: M1 log-logistic with all covariates (RQ1), M2 Weibull with all covariates (RQ2a), M3 log-logistic without age (RQ2b). f) \textbf{Store} $\hat\beta$, the scale ($=1/\hat\gamma$ for the log-logistic model) and the standard errors of each fit. Fits that fail or do not converge are skipped and counted. g) \textbf{Repeat} for all $R=2000$ runs and four scenarios, then compute the performance measures. In the code, all $n\cdot R$ patients of a scenario are generated at once and split into runs by \texttt{run\_id}.
+
 \vspace{-12pt}
 
 \begin{figure}[H]
@@ -108,7 +139,91 @@ $E$: damage outside the liver & \texttt{damage} & $\mathrm{Bernoulli}$, $P(E{=}1
 \end{figure}
 \vspace{-10pt}
 
-\section{Software implementation}
+\section{Performance measures}
+We evaluate the estimates of $\beta_D,\beta_E,\beta_A,\beta_K$, with $\beta_E$ as the main target. In each of the $R=2000$ runs we store the estimate $\hat\beta$ and its standard error. With $\bar\beta$ the average estimate over all runs, we compute:
+\textbf{Bias} $=\bar\beta-\beta$: is the estimate systematically wrong?
+\textbf{Empirical SE} $=$ the standard deviation of the estimates: how much does the estimate vary between runs? (Variance $=\mathrm{SE}^2$.)
+\textbf{MSE} $=$ the average of $(\hat\beta-\beta)^2\approx\mathrm{Bias}^2+\mathrm{Variance}$: the total error.
+\textbf{Coverage} $=$ the share of 95\% confidence intervals that contain the true $\beta$: are the standard errors reliable? It should be close to 95\%.
+For each scenario we also report the observed censoring rate and the number of runs that failed to converge (these are excluded). Both the log-logistic and the Weibull fits are AFT models fitted with \texttt{survreg}, so their coefficients are on the same scale and can be compared with the same true values. When age is left out, only $\beta_D,\beta_E,\beta_K$ are evaluated.
+
+\section{Alternative (incorrect) analyses}
+\textbf{(a) Wrong distribution: fitting a Weibull model.} We fit a Weibull AFT model instead of the log-logistic one. \emph{Why it is wrong:} the Weibull hazard can only increase, decrease or stay constant. It cannot rise and then fall, so it cannot capture the early ``dangerous peak'' in the true hazard.
+\textbf{(b) Omitting an important covariate: leaving out age.} We fit the correct log-logistic model, but without age. \emph{Why it is wrong:} age is a confounder. It increases the number of comorbidities ($K$) and the chance of an extra-hepatic cause ($E$), and it also shortens survival directly.
+
+\section{Hypotheses}
+\textbf{RQ1: correct log-logistic model.}
+\textbf{H1 (bias).} The estimated effects will be very close to the true values in all four scenarios, and any small bias at $n=200$ will be even smaller at $n=500$. The fitted model is the model that generated the data and censoring does not depend on the survival time, so the estimates are correct on average.
+\textbf{H2 (sample size).} The empirical SE will drop by about one third and the MSE will fall to roughly 40\% of its value at $n=200$. More patients give more information, and with a bias close to zero the MSE is almost entirely variance.
+\textbf{H3 (loss to follow-up).} Going from 5\% to 10\% loss will make the estimates slightly less precise but not biased, an effect much smaller than that of sample size. Extra random censoring only removes some observed events without pushing the estimates in a direction, and many patients are already censored at day 90.
+
+\textbf{RQ2a: Weibull instead of log-logistic.}
+\textbf{H4.} The Weibull model will clearly misestimate the intercept and the shape, while the covariate effects will be only slightly biased. The two models differ only in the assumed shape, so most of the misfit is absorbed by the intercept and shape. The Weibull hazard can only go up or down, so it cannot reproduce the early peak; because many patients are censored, the covariate effects will still be somewhat affected.
+\textbf{H5.} The Weibull bias will not go away with more patients while its variance will, so it will look relatively worse at $n=500$ than at $n=200$. A wrong model precisely estimates the wrong thing: more data makes the estimate more stable but not more accurate.
+\textbf{H6.} The Weibull model will be somewhat more biased at 10\% loss than at 5\%. With more censoring the estimates depend more on the assumed (wrong) shape of the distribution.
+
+\textbf{RQ2b: leaving out the confounder age.}
+\textbf{H7.} Comorbidities and damage outside the liver will look more harmful than they really are. In our data older patients have more comorbidities, more often have damage outside the liver and survive shorter, so without age part of its harmful effect is wrongly attributed to $K$ and $E$.
+\textbf{H8.} The effect of days to treatment will stay close to its true value but be estimated slightly less precisely. Days to treatment was generated independently of age, so age does not confound it; the survival variation caused by age becomes unexplained noise, which reduces precision but does not push the estimates in a direction.
+
+%=====================================================================
+\newpage
+\section*{Use of AI tools}
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+\item \textbf{Repurposing the censoring calibration function} (05/10/2026; Claude, Anthropic; user: Vrincianu Darius).
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+\item \textbf{Exact prompt:} ``Help me repurpose the `Calibrate cmax' function for this setup.''
+\item \textbf{Summary of output:} Suggested defining an objective function evaluated via \texttt{uniroot} that solves for $c_{\max}$ targeting the loss-to-follow-up probability before $\tau$.
+\item \textbf{How it was used:} Implemented as \texttt{find\_cmax} in \texttt{hw2\_simulation.R}.
+\item \textbf{Modifications:} Modified and integrated the function based on the suggestion to fit our specific parameter choices and cohort generation pipeline.
+\end{itemize}
+
+\item \textbf{Checking code line-by-line and identifying bugs} (07/10/2026; Gemini and Claude via Antigravity; user: Szelestey Adam).
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+\item \textbf{Exact prompt:} ``Based on the pseudo code in the comments check if my code is correct line-by-line. List if you found any bugs inconsistencies.''
+\item \textbf{Summary of output:} Identified that for generating $D$, \texttt{rgamma} should be used instead of \texttt{dgamma}, and noted that standard errors and non-convergence handling were missing after model fitting.
+\item \textbf{How it was used:} Corrected the covariate distribution call in \texttt{hw2\_simulation.R} and updated \texttt{fit\_model\_across\_runs} in \texttt{hw2\_model\_fitting.R} to record standard errors and count failed runs.
+\item \textbf{Modifications:} Implemented the corrections directly in the simulation scripts.
+\end{itemize}
+
+\item \textbf{Flowchart generation} (07/10/2026; Gemini and Claude via Antigravity; user: Szelestey Adam).
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+\item \textbf{Exact prompt:} ``Based on the provided pseudo code and the code create a compact mermaid flowchart with horizontal layout that fits a single page.''
+\item \textbf{Summary of output:} Provided a horizontal flowchart mapping the calibration, data generation, scenarios, model fitting, and evaluation stages.
+\item \textbf{How it was used:} Added as Figure~1 in \texttt{draft.md} and transcribed into TikZ for \texttt{main.tex}.
+\item \textbf{Modifications:} Replaced mathematical symbols ($Y,\Delta$) with dataset column names (\texttt{time}, \texttt{status}) and condensed stage nodes for readability.
+\end{itemize}
+
+\item \textbf{Typesetting the report in LaTeX and page budgeting} (07/10/2026; Gemini and Claude via Antigravity; user: Szelestey Adam).
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+\item \textbf{Exact prompt:} ``From the markdown document draft.md create a latex report with length of 2 pages that matches the style and format of main.tex (previous report). Make sure to stick to the content one by one. If it doesn't fit the 2 pages give me options where I could cut or compress the content.''
+\item \textbf{Summary of output:} A compact 2-page LaTeX draft formatted with two-column code blocks, TikZ flowchart, and concise hypotheses.
+\item \textbf{How it was used:} Generated the layout of \texttt{main.tex}. The output has to be modified because it changed the wording in some places or referenced to content that is not relevant without the project repository.
+\item \textbf{Modifications:} Preserved the exact original wording of the research questions, incorporated the group's alternative analysis text, and added the contribution statement and references.
+\end{itemize}
+\end{enumerate}
+
+\section*{Contribution statement}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+\item Avram Andrei: Hypotheses.
+\item Mihaiescu Cristian: Response to feedback and literature review.
+\item Szelestey Adam: Model fitting programming, Simulation Algorithm in report, compiling the report into LaTeX, flowchart design.
+\item Vrincianu Darius: Data generation and censoring calibration programming.
+\item Zeng Qin Tao: Performance metrics and alternative analysis.
+\end{itemize}
+All group members confirm that this contribution statement is accurate.
+
+\section*{References}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]\small
+\item Chris-Olaiya, A., Kapoor, A., Ricci, K. S., \& Lindenmeyer, C. C. (2021). Therapeutic plasma exchange in liver failure. \emph{World Journal of Hepatology}, 13(8), 904--915.
+\item Huang, D. Q., Terrault, N. A., Tacke, F., et al. (2023). Global epidemiology of cirrhosis --- aetiology, trends and predictions. \emph{Nature Reviews Gastroenterology \& Hepatology}, 20(6), 388--398.
+\item Jepsen, P. (2014). Comorbidity in cirrhosis. \emph{World Journal of Gastroenterology}, 20(23), 7223--7230.
+\item Larsen, F. S., et al. (2016). High-volume plasma exchange in patients with acute liver failure: An open randomised controlled trial. \emph{Journal of Hepatology}, 64(1), 69--78.
+\item Alexander, E. C., \& Deep, A. (2022). Therapeutic plasma exchange in children with acute liver failure (ALF): Is it time for incorporation into the ALF armamentarium? \emph{Pediatric Nephrology}, 37(8), 1775--1788.
+\end{itemize}
+
+\section{Appendix}
+\section*{Software implementation}
 Condensed R code (left: data generation and censoring; right: model fitting and storage).\\[2pt]
 \begin{minipage}[t]{0.49\textwidth}
 \begin{lstlisting}[style=rcode]
@@ -195,86 +310,9 @@ saveRDS(model_estimates, "model_estimates.rds")
 \end{lstlisting}
 \end{minipage}
 
-\section{Performance measures}
-We evaluate the estimates of $\beta_D,\beta_E,\beta_A,\beta_K$, with $\beta_E$ as the main target. In each of the $R=2000$ runs we store the estimate $\hat\beta$ and its standard error. With $\bar\beta$ the average estimate over all runs, we compute:
-\textbf{Bias} $=\bar\beta-\beta$: is the estimate systematically wrong?
-\textbf{Empirical SE} $=$ the standard deviation of the estimates: how much does the estimate vary between runs? (Variance $=\mathrm{SE}^2$.)
-\textbf{MSE} $=$ the average of $(\hat\beta-\beta)^2\approx\mathrm{Bias}^2+\mathrm{Variance}$: the total error.
-\textbf{Coverage} $=$ the share of 95\% confidence intervals that contain the true $\beta$: are the standard errors reliable? It should be close to 95\%.
-For each scenario we also report the observed censoring rate and the number of runs that failed to converge (these are excluded). Both the log-logistic and the Weibull fits are AFT models fitted with \texttt{survreg}, so their coefficients are on the same scale and can be compared with the same true values. When age is left out, only $\beta_D,\beta_E,\beta_K$ are evaluated.
-
-\section{Alternative (incorrect) analyses}
-\textbf{(a) Wrong distribution: fitting a Weibull model.} We fit a Weibull AFT model instead of the log-logistic one. \emph{Why it is wrong:} the Weibull hazard can only increase, decrease or stay constant. It cannot rise and then fall, so it cannot capture the early ``dangerous peak'' in the true hazard.
-\textbf{(b) Omitting an important covariate: leaving out age.} We fit the correct log-logistic model, but without age. \emph{Why it is wrong:} age is a confounder. It increases the number of comorbidities ($K$) and the chance of an extra-hepatic cause ($E$), and it also shortens survival directly.
-
-\section{Hypotheses}
-\textbf{RQ1: correct log-logistic model.}
-\textbf{H1 (bias).} The estimated effects will be very close to the true values in all four scenarios, and any small bias at $n=200$ will be even smaller at $n=500$. The fitted model is the model that generated the data and censoring does not depend on the survival time, so the estimates are correct on average.
-\textbf{H2 (sample size).} The empirical SE will drop by about one third and the MSE will fall to roughly 40\% of its value at $n=200$. More patients give more information, and with a bias close to zero the MSE is almost entirely variance.
-\textbf{H3 (loss to follow-up).} Going from 5\% to 10\% loss will make the estimates slightly less precise but not biased, an effect much smaller than that of sample size. Extra random censoring only removes some observed events without pushing the estimates in a direction, and many patients are already censored at day 90.
-
-\textbf{RQ2a: Weibull instead of log-logistic.}
-\textbf{H4.} The Weibull model will clearly misestimate the intercept and the shape, while the covariate effects will be only slightly biased. The two models differ only in the assumed shape, so most of the misfit is absorbed by the intercept and shape. The Weibull hazard can only go up or down, so it cannot reproduce the early peak; because many patients are censored, the covariate effects will still be somewhat affected.
-\textbf{H5.} The Weibull bias will not go away with more patients while its variance will, so it will look relatively worse at $n=500$ than at $n=200$. A wrong model precisely estimates the wrong thing: more data makes the estimate more stable but not more accurate.
-\textbf{H6.} The Weibull model will be somewhat more biased at 10\% loss than at 5\%. With more censoring the estimates depend more on the assumed (wrong) shape of the distribution.
-
-\textbf{RQ2b: leaving out the confounder age.}
-\textbf{H7.} Comorbidities and damage outside the liver will look more harmful than they really are. In our data older patients have more comorbidities, more often have damage outside the liver and survive shorter, so without age part of its harmful effect is wrongly attributed to $K$ and $E$.
-\textbf{H8.} The effect of days to treatment will stay close to its true value but be estimated slightly less precisely. Days to treatment was generated independently of age, so age does not confound it; the survival variation caused by age becomes unexplained noise, which reduces precision but does not push the estimates in a direction.
-
-%=====================================================================
-\newpage
-\section*{Use of AI tools}
-\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
-\item \textbf{Repurposing the censoring calibration function} (05/10/2026; Claude, Anthropic; user: Vrincianu Darius).
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
-\item \textbf{Exact prompt:} ``Help me repurpose the `Calibrate cmax' function from the first assignment for this setup.''
-\item \textbf{Summary of output:} Suggested defining an objective function evaluated via \texttt{uniroot} that solves for $c_{\max}$ targeting the loss-to-follow-up probability before $\tau$.
-\item \textbf{How it was used:} Implemented as \texttt{find\_cmax} in \texttt{hw2\_simulation.R}.
-\item \textbf{Modifications:} Modified and integrated the function based on the suggestion to fit our specific parameter choices and cohort generation pipeline.
-\end{itemize}
-
-\item \textbf{Checking code line-by-line and identifying bugs} (07/10/2026; Gemini and Claude via Antigravity; user: Szelestey Adam).
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
-\item \textbf{Exact prompt:} ``Based on the pseudo code in the comments check if my code is correct line-by-line. List if you found any bugs inconsistencies.''
-\item \textbf{Summary of output:} Identified that for generating $D$, \texttt{rgamma} should be used instead of \texttt{dgamma}, and noted that standard errors and non-convergence handling were missing after model fitting.
-\item \textbf{How it was used:} Corrected the covariate distribution call in \texttt{hw2\_simulation.R} and updated \texttt{fit\_model\_across\_runs} in \texttt{hw2\_model\_fitting.R} to record standard errors and count failed runs.
-\item \textbf{Modifications:} Implemented the corrections directly in the simulation scripts.
-\end{itemize}
-
-\item \textbf{Flowchart generation} (07/10/2026; Gemini and Claude via Antigravity; user: Szelestey Adam).
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
-\item \textbf{Exact prompt:} ``Based on the provided pseudo code and the code create a compact mermaid flowchart with horizontal layout that fits a single page.''
-\item \textbf{Summary of output:} Provided a horizontal flowchart mapping the calibration, data generation, scenarios, model fitting, and evaluation stages.
-\item \textbf{How it was used:} Added as Figure~1 in \texttt{draft.md} and transcribed into TikZ for \texttt{main.tex}.
-\item \textbf{Modifications:} Replaced mathematical symbols ($Y,\Delta$) with dataset column names (\texttt{time}, \texttt{status}) and condensed stage nodes for readability.
-\end{itemize}
-
-\item \textbf{Typesetting the report in LaTeX and page budgeting} (07/10/2026; Gemini and Claude via Antigravity; user: Szelestey Adam).
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
-\item \textbf{Exact prompt:} ``From the markdown document draft.md create a latex report with length of 2 pages that matches the style and format of main.tex (previous report). Make sure to stick to the content one by one. If it doesn't fit the 2 pages give me options where I could cut or compress the content.''
-\item \textbf{Summary of output:} A compact 2-page LaTeX draft formatted with two-column code blocks, TikZ flowchart, and concise hypotheses.
-\item \textbf{How it was used:} Generated the layout of \texttt{main.tex}.
-\item \textbf{Modifications:} Preserved the exact original wording of the research questions, incorporated the group's alternative analysis text, and added the contribution statement and references.
-\end{itemize}
-\end{enumerate}
-
-\section*{Contribution statement}
-\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
-\item Avram Andrei: [Hypotheses].
-\item Mihaiescu Cristian: [Response to feedback and literature review].
-\item Szelestey Adam: [Model fitting programming, compiling the report into LaTeX, flowchart design].
-\item Vrincianu Darius: [Data generation and censoring calibration programming].
-\item Zeng Qin Tao: [Performance metrics and alternative analysis].
-\end{itemize}
-All group members confirm that this contribution statement is accurate.
-
-\section*{References}
-\begin{itemize}[leftmargin=1.2em,itemsep=2pt]\small
-\item Chris-Olaiya, A., Kapoor, A., Ricci, K. S., \& Lindenmeyer, C. C. (2021). Therapeutic plasma exchange in liver failure. \emph{World Journal of Hepatology}, 13(8), 904--915.
-\item Huang, D. Q., Terrault, N. A., Tacke, F., et al. (2023). Global epidemiology of cirrhosis --- aetiology, trends and predictions. \emph{Nature Reviews Gastroenterology \& Hepatology}, 20(6), 388--398.
-\item Jepsen, P. (2014). Comorbidity in cirrhosis. \emph{World Journal of Gastroenterology}, 20(23), 7223--7230.
-\item Larsen, F. S., et al. (2016). High-volume plasma exchange in patients with acute liver failure: An open randomised controlled trial. \emph{Journal of Hepatology}, 64(1), 69--78.
-\end{itemize}
+\section*{Response to Feedback}
+\textbf{Feedback received:} ``The only comment I have is that you do not look up the literature after Gemini gave you information about TPE and liver failure. Can you check this for the next assignment?''
+\textbf{How it was addressed:} We fact-checked the information from Gemini Pro against the literature. TPE is used for ALF for either as a "bridge" to liver recovery or maintain stability until liver transplant is possible (Alexander \& Deep, 2022, pp.~1775--1788). When it comes to comorbitidies, older age is strongly associated with an increased accumulation and severity of extrahepatic comorbid diseases (Jepsen, 2014, pp.~7223--7225). Patients receiving TPE for acute liver failure are critically ill intensive-care patients and their trajectory is determined within days to weeks by either native hepatocyte recovery or emergency transplant, making outpatient hospital readmission an uninformative metric for acute TPE efficacy. Reviewing this literature justified moving away from a hospital readmission framework and instead defining the failure event in Part I as transplant-free survival (time to death or liver transplant), observed from the first TPE cycle with right-censoring at 90 days (Chris-Olaiya et al., 2021, p.~906).
+\textbf{Suggestions not adopted:} none; the single suggestion was adopted.
 
 \end{document}
