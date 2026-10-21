@@ -40,6 +40,12 @@
   frame=none
 }
 
+\ifdefined\pdfmapline
+  \pdfmapline{+rsfs10 CMSY10 <cmsy10.pfb}
+  \pdfmapline{+rsfs7 CMSY7 <cmsy7.pfb}
+  \pdfmapline{+rsfs5 CMSY5 <cmsy5.pfb}
+\fi
+
 \begin{document}
 
 \begin{center}
@@ -222,6 +228,7 @@ All group members confirm that this contribution statement is accurate.
 \item Alexander, E. C., \& Deep, A. (2022). Therapeutic plasma exchange in children with acute liver failure (ALF): Is it time for incorporation into the ALF armamentarium? \emph{Pediatric Nephrology}, 37(8), 1775--1788.
 \end{itemize}
 
+\newpage
 \section{Appendix}
 \section*{Software implementation}
 Condensed R code (left: data generation and censoring; right: model fitting and storage).\\[2pt]
@@ -312,7 +319,7 @@ saveRDS(model_estimates, "model_estimates.rds")
 
 \section*{Response to Feedback}
 \textbf{Feedback received:} ``The only comment I have is that you do not look up the literature after Gemini gave you information about TPE and liver failure. Can you check this for the next assignment?''
-\textbf{How it was addressed:} We fact-checked the information from Gemini Pro against the literature. TPE is used for ALF for either as a "bridge" to liver recovery or maintain stability until liver transplant is possible (Alexander \& Deep, 2022, pp.~1775--1788). When it comes to comorbitidies, older age is strongly associated with an increased accumulation and severity of extrahepatic comorbid diseases (Jepsen, 2014, pp.~7223--7225). Patients receiving TPE for acute liver failure are critically ill intensive-care patients and their trajectory is determined within days to weeks by either native hepatocyte recovery or emergency transplant, making outpatient hospital readmission an uninformative metric for acute TPE efficacy. Reviewing this literature justified moving away from a hospital readmission framework and instead defining the failure event in Part I as transplant-free survival (time to death or liver transplant), observed from the first TPE cycle with right-censoring at 90 days (Chris-Olaiya et al., 2021, p.~906).
+\textbf{How it was addressed:} We fact-checked the information from Gemini Pro against the literature. TPE is used in acute liver failure (ALF) either as a ``bridge'' to liver recovery or to maintain stability until liver transplant is possible (Alexander \& Deep, 2022, pp.~1775--1788). When it comes to comorbidities, older age is strongly associated with an increased accumulation and severity of extrahepatic comorbid diseases (Jepsen, 2014, pp.~7223--7225). Patients receiving TPE for acute liver failure are critically ill intensive-care patients and their trajectory is determined within days to weeks by either native hepatocyte recovery or emergency transplant, making outpatient hospital readmission an uninformative metric for acute TPE efficacy. Reviewing this literature justified moving away from a hospital readmission framework and instead defining the failure event in Part I as transplant-free survival (time to death or liver transplant), observed from the first TPE cycle with right-censoring at 90 days (Chris-Olaiya et al., 2021, p.~906).
 \textbf{Suggestions not adopted:} none; the single suggestion was adopted.
 
 \end{document}

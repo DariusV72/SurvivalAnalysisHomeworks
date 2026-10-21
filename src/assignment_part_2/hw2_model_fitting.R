@@ -18,6 +18,30 @@ simulated_data <- readRDS(sim_data_path)
 # Observed censoring rate per scenario (share of patients with status == 0)
 censoring_rate <- vapply(simulated_data, function(d) 1 - mean(d[["status"]]), numeric(1))
 
+# Observed censoring ratio per run (mean and std across 2000 runs per scenario)
+censoring_per_run <- lapply(simulated_data, function(d) {
+  tapply(d[["status"]] == 0, d[["run_id"]], mean)
+})
+censoring_mean <- vapply(censoring_per_run, mean, numeric(1))
+censoring_std  <- vapply(censoring_per_run, sd, numeric(1))
+
+# Observed loss to follow-up per run (censored before cutoff tau = 90)
+loss_per_run <- lapply(simulated_data, function(d) {
+  tapply(d[["status"]] == 0 & d[["time"]] < 90, d[["run_id"]], mean)
+})
+loss_mean <- vapply(loss_per_run, mean, numeric(1))
+loss_std  <- vapply(loss_per_run, sd, numeric(1))
+
+censoring_summary <- data.frame(
+  scenario = names(simulated_data),
+  loss_mean = loss_mean,
+  loss_std = loss_std,
+  total_mean = censoring_mean,
+  total_std = censoring_std
+)
+cat("Observed censoring breakdown across simulation runs (mean and std):\n")
+print(censoring_summary, digits = 4, row.names = FALSE)
+
 # Helper function to fit a parametric model across all 2000 runs in a scenario.
 # Stores coefficients, scale and standard errors for every run. Runs where
 # survreg fails or does not converge are skipped (excluded) and counted in
@@ -99,7 +123,11 @@ model_estimates <- list(
   rq1_loglogistic = rq1_estimates,
   rq2a_weibull = rq2a_estimates,
   rq2b_no_age = rq2b_estimates,
-  censoring_rate = censoring_rate
+  censoring_rate = censoring_rate,
+  censoring_std = censoring_std,
+  loss_mean = loss_mean,
+  loss_std = loss_std,
+  censoring_summary = censoring_summary
 )
 
 saveRDS(model_estimates, file = file.path(data_dir, "model_estimates.rds"))
