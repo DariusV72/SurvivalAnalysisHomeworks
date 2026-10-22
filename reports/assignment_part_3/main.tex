@@ -208,9 +208,32 @@ M3 no age & 200 & $-0.170$ & 0.276 & 0.105 & 90\% & $-0.124$ & 0.110 & 0.027 & 7
 \end{figure}
 
 \section{Evaluation}
+\paragraph{RQ1}
+\textbf{M1}:
+\textbf{Bias}: the correctly specified log-logistic model is practically unbiased for both etiology ($\beta_E$ bias of $-0.009$ to $+0.004$) and comorbidities ($\beta_K$ bias of $+0.001$ to $+0.003$), and the same holds for $\beta_D$ and $\beta_A$, because the fitted model is the model that generated the data and censoring is independent of survival. Only the scale $\hat\sigma=1/\hat\gamma$ is slightly too small ($-0.015$ at $n=200$, $-0.008$ at $n=500$), the usual small-sample bias of maximum likelihood. \textbf{Variability}: SE decreases with the sample size ($\text{SE}_{\beta_E}$ drops from $0.284$ to $0.173$; $\text{SE}_{\beta_K}$ drops from $0.126$ to $0.080$), a factor of $0.61$ - $0.65$ that is close to the theoretical $\sqrt{200/500}=0.63$. Between 5\% and 10\% loss to follow-up the SE differs by less than $0.01$. The model based SEs match the empirical SEs, so the coverage stays at $94$ - $95$\%. \textbf{MSE}: since the bias is negligible, the MSE is almost entirely variance and falls with sample size($0.081$ to $0.030$ for $\beta_E$; $0.016$ to $0.006$ for $\beta_K$), to $37$--$42\%$ of its value at $n=200$. \textbf{Practical implications}: with 43\% - 45\% censoring , the correct model already gives unbiased estimates and valid confidence intervals at $n = 200$, but they are wide: the 95\% interval for the etiology time ratio ($e^{\beta_E}=0.50$) runs from $0.28$ to $0.87$ at $n=200$ and from $0.35$ to $0.70$ at $n=500$. The precision of the results is determined by the sample size, not by a moderate amount of extra loss to follow-up.
+\paragraph{RQ2}
+\textbf{M2}:
+\textbf{Bias}: Weibull introduces a positive bias for both etiology ($\beta_E$ bias of $+0.078$ to $+0.097$) and comorbidities ($\beta_K$ bias of $+0.031$ to $+0.036$), because a monotonic Weibull hazard cannot capture the early "dangerous peak" of the true log-logistic hazard. \textbf{Variability}: SE decreases with n ($\text{SE}_{\beta_E}$ drops from $0.264$ to $0.163$; $\text{SE}_{\beta_K}$ drops from $0.122$ to $0.078$). \textbf{MSE}: random sampling variance dominates at $n=200$, where M2’s slightly smaller SE yields a lower MSE for $\beta_E$ than M1 ($0.076$ vs. $0.081$). However, at $n=500$, as variance decreases, M2’s bias makes its MSE worse than M1 ($0.036$ vs. $0.030$ for $\beta_E$; $0.007$ vs. $0.006$ for $\beta_K$).  \textbf{Practical implications}: misspecifying the baseline hazard causes the clinicians to underestimate the survival impact of etiology and comorbidities.
+
+
+\textbf{M3}:
+\textbf{Bias}: Omitting the age introduces a negative bias for both etiology ($\beta_E$ bias of $-0.170$ to $-0.158$) and comorbidities ($\beta_K$ bias of $-0.124$ across both sample sizes). Because older age increases both the likelihood of $E$ and $K$ while also shortening survival, leaving age out of the model forces $\hat{\beta}_E$ and $\hat{\beta}_K$ to increase their effect. $\beta_D$ remains unbiased (bias $<0.001$) because it is independent of age. \textbf{Variability}: SE decreases with n ($\text{SE}_{\beta_E}$ drops from $0.276$ to $0.169$; $\text{SE}_{\beta_K}$ drops from $0.110$ to $0.069$) and differs by less than $0.01$ between $5\%$ and $10\%$ loss to follow-up. \textbf{MSE}: remains worse than in M1 for both $n=200$ ($0.105$ vs. $0.081$ for $\beta_E$; $0.027$ vs. $0.016$ for $\beta_K$) and $n=500$ ($0.053$ vs. $0.030$ for $\beta_E$; $0.020$ vs. $0.006$ for $\beta_K$), where squared bias strongly influences the total error. \textbf{Practical implications}: failing to adjust for a clinical confounder like age, it strongly increases the harmful survival impact of etiology and comorbidities, leading to misguiding clinical risk assessments.
 
 
 \section{Comparison with expectations}
+\subsection{RQ1}
+\textbf{H1: True}: All biases of M1 are below $0.01$ in absolute value and coverage is close to 95\% in every scenario. The biases are already so small at $n=200$ that they are mostly simulation noise, so they do not visibly shrink further at $n=500$; the small bias of the scale does shrink ($-0.015$ to $-0.008$), as predicted.
+
+\textbf{H2: True)}: We predicted that the SE would drop by about one third and the MSE would fall to about 40\%. The observed SE ratios are $0.61$--$0.65$ and the MSE ratios $0.37$--$0.42$ for all four coefficients, because with a correct model and negligible bias the precision follows the $1/\sqrt n$ rule.
+
+\textbf{H3: Partly True}: As expected, 10\% loss introduces no bias and has a much smaller effect than sample size. However, the predicted small loss of precision does not appear: the SEs at 10\% loss are sometimes larger and sometimes smaller than at 5\%, within simulation noise. This is because the extra loss barely reduces the number of observed events: total censoring rises only from 42.9\% to 44.6\% (Table~\ref{tab:censoring}), since many of the extra lost patients would have been censored at day 90 anyway.
+
+\subsection{RQ2}
+\textbf{H4: True!} M2 slightly biased the covariate estimates ($\beta_E$ bias of $+0.08$ to $+0.10$; $\beta_K$ bias of $+0.03$ to $+0.04$). Because the Weibull hazard is strictly monotonic, it cannot reproduce the early "dangerous peak". While the intercept and shape parameters absorb most of this mismatch, the high censoring rate ($43\text{--}45\%$) causes the misspecification to slightly bias the covariate effects.
+\textbf{H5: True!} M2 bias persisted for n=500 and worsened the coverage. Bias remained +0.97, but coverage dropped from 92\% to 89\%. The misspecified model fits to the wrong parameter value. Growing n would reduce SE around the biased value, shifting the center of the coverage.
+\textbf{H6: False!} M2 was less biased for a loss of 10\% compared to 5\%. The results differ by less than 0.01 in SE. Doubling the random loss from 5\% only increased the total observed censoring from 43\% to 45\% being insignificant.
+\textbf{H7: True!} M3 produced a large negative effect on $\beta_E$ (from -0.170 to -0.158) and $\beta_K$ (-0.124). The older age increases both the probability of $E$ and $K$ while also reducing the survival time. Leaving out this confounder would make $\hat{\beta}_E$ and $\hat{\beta}_K$ to strongly increase the harmful impact caused by them.
+\textbf{H8: True!} In M3, the effect of days to treatment ($\hat{\beta}_D$) had a bias below $0.001$ and maintained $94\text{--}95\%$ coverage. $D$ was generated independently of $A$, hence it is not a confounder for $D$.
 
 \section{Conclusions}
 
@@ -376,7 +399,5 @@ Sample size ($n$) & Target Loss & Mean & Std. Dev. & Mean & Std. Dev. \\
 \end{tabular}
 \end{table}
 \vspace{-6pt}
-
-\textbf{Suggestions not adopted:} None; the feedback was adopted in full.
 
 \end{document}
